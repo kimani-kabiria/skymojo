@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:unicons/unicons.dart';
+import 'package:skymojo/services/location_cache_service.dart';
 
 class WeatherAlerts extends StatelessWidget {
-  const WeatherAlerts({super.key});
+  final SelectedLocation? selectedLocation;
+
+  const WeatherAlerts({super.key, this.selectedLocation});
 
   @override
   Widget build(BuildContext context) {

@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:unicons/unicons.dart';
+import 'package:skymojo/services/location_cache_service.dart';
 
 class CurrentWeather extends StatefulWidget {
-  const CurrentWeather({super.key});
+  final SelectedLocation? selectedLocation;
+
+  const CurrentWeather({super.key, this.selectedLocation});
 
   @override
   State<CurrentWeather> createState() => _CurrentWeatherState();

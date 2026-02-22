@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:skymojo/services/location_cache_service.dart';
 
 class CurrentNightly extends StatefulWidget {
-  const CurrentNightly({super.key});
+  final SelectedLocation? selectedLocation;
+
+  const CurrentNightly({super.key, this.selectedLocation});
 
   @override
   State<CurrentNightly> createState() => _CurrentNightlyState();

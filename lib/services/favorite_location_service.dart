@@ -58,15 +58,11 @@ class FavoriteLocationService {
         'is_default': isDefault,
       };
 
-      print('DEBUG: Sending data to database: $locationData');
-
       final response = await _client
           .from('favorite_locations')
           .insert(locationData)
           .select()
           .single();
-
-      print('DEBUG: Database response: $response');
 
       // Safely create FavoriteLocation with null checks
       final favoriteLocation = FavoriteLocation(
@@ -84,7 +80,6 @@ class FavoriteLocationService {
             : DateTime.now(),
       );
 
-      print('Added favorite location: ${favoriteLocation.name}');
       return favoriteLocation;
     } catch (e) {
       print('Error adding favorite location: $e');

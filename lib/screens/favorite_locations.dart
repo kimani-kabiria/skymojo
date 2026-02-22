@@ -4,6 +4,7 @@ import 'package:skymojo/services/favorite_location_service.dart';
 import 'package:skymojo/models/user_profile.dart';
 import 'package:skymojo/services/user_profile_service.dart';
 import 'package:skymojo/services/notification_service.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geocoding/geocoding.dart';
@@ -686,6 +687,23 @@ class _FavoriteLocationsScreenState extends State<FavoriteLocationsScreen> {
     }
   }
 
+  Future<void> _setAsProfileDefault(FavoriteLocation location) async {
+    try {
+      await UserProfileService.updateProfile(
+        userId: Supabase.instance.client.auth.currentUser!.id,
+        defaultLocation: location.name,
+      );
+
+      _loadData();
+
+      NotificationService.showSuccessToast(
+          '${location.name} set as profile default');
+    } catch (e) {
+      NotificationService.showErrorToast(
+          'Error setting profile default: ${e.toString()}');
+    }
+  }
+
   Widget _buildLocationCard(FavoriteLocation location) {
     final isDefault = location.isDefault;
     final isCurrentLocation = location.name == 'Current Location';
@@ -745,17 +763,50 @@ class _FavoriteLocationsScreenState extends State<FavoriteLocationsScreen> {
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
                 if (!isDefault && !isCurrentLocation)
-                  TextButton.icon(
-                    onPressed: () => _setDefaultLocation(location),
-                    icon: const Icon(Icons.star, size: 16),
-                    label: const Text('Set as Default'),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: TextButton.icon(
+                        onPressed: () => _setDefaultLocation(location),
+                        icon: const Icon(Icons.star, size: 16),
+                        label: const Text('Default',
+                            style: TextStyle(fontSize: 14)),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 6),
+                        ),
+                      ),
+                    ),
                   ),
                 if (!isCurrentLocation)
-                  TextButton.icon(
-                    onPressed: () => _deleteLocation(location),
-                    icon: const Icon(Icons.delete, size: 16, color: Colors.red),
-                    label: const Text('Delete',
-                        style: TextStyle(color: Colors.red)),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 4),
+                      child: TextButton.icon(
+                        onPressed: () => _setAsProfileDefault(location),
+                        icon: const Icon(Icons.home, size: 16),
+                        label: const Text('Profile',
+                            style: TextStyle(fontSize: 14)),
+                        style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 8, vertical: 6),
+                        ),
+                      ),
+                    ),
+                  ),
+                if (!isCurrentLocation)
+                  Expanded(
+                    child: TextButton.icon(
+                      onPressed: () => _deleteLocation(location),
+                      icon:
+                          const Icon(Icons.delete, size: 16, color: Colors.red),
+                      label: const Text('Delete',
+                          style: TextStyle(color: Colors.red, fontSize: 14)),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 6),
+                      ),
+                    ),
                   ),
               ],
             ),
@@ -943,45 +994,6 @@ class _FavoriteLocationsScreenState extends State<FavoriteLocationsScreen> {
                                 ),
                               ],
                             ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Debug info for current location
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(12),
-                      decoration: BoxDecoration(
-                        color: Colors.yellow[100],
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.orange),
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Debug Info:',
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.orange,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            'Current location name: "${_nameController.text}"',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.black87,
-                            ),
-                          ),
-                          Text(
-                            'Selected location: ${_selectedLocation?.latitude.toStringAsFixed(4)}, ${_selectedLocation?.longitude.toStringAsFixed(4)}',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.black87,
-                            ),
-                          ),
                         ],
                       ),
                     ),

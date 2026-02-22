@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
 import 'package:skymojo/components/utils/weather_icon.dart';
+import 'package:skymojo/services/location_cache_service.dart';
 
 class CurrentForecast extends StatefulWidget {
-  const CurrentForecast({super.key});
+  final SelectedLocation? selectedLocation;
+
+  const CurrentForecast({super.key, this.selectedLocation});
 
   @override
   State<CurrentForecast> createState() => _CurrentForecastState();
@@ -76,8 +79,10 @@ class _CurrentForecastState extends State<CurrentForecast> {
             alignment: Alignment.topCenter,
             child: Column(
               children: [
-                Text(day, style: const TextStyle(color: Colors.white, fontSize: 20)),
-                Text(date, style: const TextStyle(color: Colors.white, fontSize: 20)),
+                Text(day,
+                    style: const TextStyle(color: Colors.white, fontSize: 20)),
+                Text(date,
+                    style: const TextStyle(color: Colors.white, fontSize: 20)),
                 WeatherIcon(weather: weather)
               ],
             )),
