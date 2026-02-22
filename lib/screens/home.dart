@@ -4,6 +4,7 @@ import 'package:skymojo/screens/nightly.dart';
 import 'package:skymojo/screens/dash.dart';
 import 'package:skymojo/screens/weather.dart';
 import 'package:skymojo/screens/profile.dart';
+import 'package:skymojo/screens/favorite_locations.dart';
 import 'package:skymojo/services/auth_service.dart';
 import 'package:skymojo/services/user_profile_service.dart';
 import 'package:skymojo/models/user_profile.dart';
@@ -303,6 +304,17 @@ class _NavBarState extends State<NavBar> {
                         title: const Text('Home'),
                         onTap: () {
                           Navigator.pop(context);
+                        },
+                      ),
+                      ListTile(
+                        leading: const Icon(Icons.location_on),
+                        title: const Text('Favorite Locations'),
+                        onTap: () {
+                          Navigator.pop(context);
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const FavoriteLocationsScreen()),
+                          );
                         },
                       ),
                       ListTile(

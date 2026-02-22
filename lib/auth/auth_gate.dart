@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:skymojo/screens/home.dart';
 import 'package:skymojo/services/google_auth_service.dart';
+import 'package:skymojo/services/notification_service.dart';
 
 class AuthGate extends StatelessWidget {
   const AuthGate({super.key});
@@ -12,7 +13,7 @@ class AuthGate extends StatelessWidget {
       stream: Supabase.instance.client.auth.onAuthStateChange,
       builder: (context, snapshot) {
         final session = snapshot.data?.session;
-        
+
         if (session != null) {
           return const Home();
         } else {
@@ -45,15 +46,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _signInWithGoogle() async {
     setState(() => _isLoading = true);
-    
+
     try {
       await GoogleAuthService.signInWithGoogle();
       // Navigation will be handled by AuthGate stream
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        NotificationService.showErrorToast('Error: ${e.toString()}');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -62,7 +61,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _signIn() async {
     setState(() => _isLoading = true);
-    
+
     try {
       await Supabase.instance.client.auth.signInWithPassword(
         email: _emailController.text.trim(),
@@ -70,9 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        NotificationService.showErrorToast('Error: ${e.toString()}');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -81,23 +78,19 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _signUp() async {
     setState(() => _isLoading = true);
-    
+
     try {
       await Supabase.instance.client.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
-      
+
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Check your email for confirmation!')),
-        );
+        NotificationService.showInfoToast('Check your email for confirmation!');
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: ${e.toString()}')),
-        );
+        NotificationService.showErrorToast('Error: ${e.toString()}');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -171,7 +164,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 width: double.infinity,
                 height: 50,
                 child: ElevatedButton(
-                  onPressed: _isLoading ? null : (_isSignUp ? _signUp : _signIn),
+                  onPressed:
+                      _isLoading ? null : (_isSignUp ? _signUp : _signIn),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.orangeAccent,
                     foregroundColor: const Color(0xFF083235),
@@ -180,7 +174,8 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                   child: _isLoading
-                      ? const CircularProgressIndicator(color: Color(0xFF083235))
+                      ? const CircularProgressIndicator(
+                          color: Color(0xFF083235))
                       : Text(_isSignUp ? 'Sign Up' : 'Sign In'),
                 ),
               ),
@@ -190,19 +185,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 width: double.infinity,
                 height: 50,
                 child: OutlinedButton.icon(
-                  onPressed: _isLoading ? null : () async {
-                    print('Google Sign-In button clicked');
-                    try {
-                      await _signInWithGoogle();
-                    } catch (e) {
-                      print('Google Sign-In error: $e');
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text('Google Sign-In Error: ${e.toString()}')),
-                        );
-                      }
-                    }
-                  },
+                  onPressed: _isLoading
+                      ? null
+                      : () async {
+                          print('Google Sign-In button clicked');
+                          try {
+                            await _signInWithGoogle();
+                          } catch (e) {
+                            print('Google Sign-In error: $e');
+                            if (mounted) {
+                              NotificationService.showErrorToast(
+                                  'Google Sign-In Error: ${e.toString()}');
+                            }
+                          }
+                        },
                   icon: Container(
                     width: 24,
                     height: 24,
@@ -234,7 +230,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   setState(() => _isSignUp = !_isSignUp);
                 },
                 child: Text(
-                  _isSignUp ? 'Already have an account? Sign In' : 'Need an account? Sign Up',
+                  _isSignUp
+                      ? 'Already have an account? Sign In'
+                      : 'Need an account? Sign Up',
                   style: const TextStyle(color: Colors.white),
                 ),
               ),

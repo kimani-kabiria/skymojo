@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:skymojo/models/user_profile.dart';
 import 'package:skymojo/services/user_profile_service.dart';
 import 'package:skymojo/services/google_auth_service.dart';
+import 'package:skymojo/services/notification_service.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:geocoding/geocoding.dart';
@@ -29,7 +30,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _locationController = TextEditingController();
   String _selectedTemperatureUnit = 'celsius';
   String _selectedTheme = 'auto';
-  
+
   // Location variables
   LatLng? _selectedLocation;
   LatLng? _initialPosition;
@@ -56,12 +57,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadProfile() async {
     setState(() => _isLoading = true);
-    
+
     try {
       final profile = await UserProfileService.getCurrentUserProfile();
-      final avatarFromMetadata = await UserProfileService.getUserAvatarFromMetadata();
-      final nameFromMetadata = await UserProfileService.getUserNameFromMetadata();
-      
+      final avatarFromMetadata =
+          await UserProfileService.getUserAvatarFromMetadata();
+      final nameFromMetadata =
+          await UserProfileService.getUserNameFromMetadata();
+
       setState(() {
         _profile = profile;
         if (profile != null) {
@@ -70,18 +73,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _locationController.text = profile.defaultLocation ?? '';
           _selectedTemperatureUnit = profile.temperatureUnit;
           _selectedTheme = profile.themePreference;
-          
+
           // Parse existing location if available
-          if (profile.defaultLocation != null && profile.defaultLocation!.isNotEmpty) {
+          if (profile.defaultLocation != null &&
+              profile.defaultLocation!.isNotEmpty) {
             _parseLocationFromAddress(profile.defaultLocation!);
           }
         }
-        
+
         // If no profile avatar, try to get from metadata
         if (_profile?.avatarUrl == null && avatarFromMetadata != null) {
           _profile = _profile?.copyWith(avatarUrl: avatarFromMetadata);
         }
-        
+
         // If no profile name, try to get from metadata
         if (_profile?.fullName == null && nameFromMetadata != null) {
           _profile = _profile?.copyWith(fullName: nameFromMetadata);
@@ -89,9 +93,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error loading profile: ${e.toString()}')),
-        );
+        NotificationService.showErrorToast(
+            'Error loading profile: ${e.toString()}');
       }
     } finally {
       setState(() => _isLoading = false);
@@ -119,9 +122,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
       print('DEBUG: Location service enabled: $serviceEnabled');
       if (!serviceEnabled) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location services are disabled.')),
-        );
+        NotificationService.showWarningToast('Location services are disabled.');
         return;
       }
 
@@ -131,24 +132,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
         permission = await Geolocator.requestPermission();
         print('DEBUG: Permission after request: $permission');
         if (permission == LocationPermission.denied) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location permissions are denied')),
-          );
+          NotificationService.showWarningToast(
+              'Location permissions are denied');
           return;
         }
       }
 
       if (permission == LocationPermission.deniedForever) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Location permissions are permanently denied')),
-        );
+        NotificationService.showErrorToast(
+            'Location permissions are permanently denied');
         return;
       }
 
       print('DEBUG: Getting current position...');
       final position = await Geolocator.getCurrentPosition();
       print('DEBUG: Got position: ${position.latitude}, ${position.longitude}');
-      
+
       final newLocation = LatLng(position.latitude, position.longitude);
       setState(() {
         _selectedLocation = newLocation;
@@ -168,15 +167,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
       if (addresses.isNotEmpty) {
         final address = addresses.first;
-        final locationText = '${address.locality}, ${address.administrativeArea}, ${address.country}';
+        final locationText =
+            '${address.locality}, ${address.administrativeArea}, ${address.country}';
         print('DEBUG: Got address: $locationText');
         _locationController.text = locationText;
       }
     } catch (e) {
       print('DEBUG: Error getting location: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error getting location: ${e.toString()}')),
-      );
+      NotificationService.showErrorToast(
+          'Error getting location: ${e.toString()}');
     }
   }
 
@@ -188,28 +187,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
       return;
     }
-    
+
     try {
       print('DEBUG: Searching for location: $query');
       // Use Geoapify API for geocoding
-      final url = 'https://api.geoapify.com/v1/geocode/search?text=${Uri.encodeComponent(query)}&apiKey=7ae5dc566f9f4047bd609208fae21ddb&limit=1';
-      
+      final url =
+          'https://api.geoapify.com/v1/geocode/search?text=${Uri.encodeComponent(query)}&apiKey=7ae5dc566f9f4047bd609208fae21ddb&limit=1';
+
       final response = await http.get(Uri.parse(url));
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         print('DEBUG: API response: $data');
-        
+
         // Check for FeatureCollection format (search results)
-        if (data['type'] == 'FeatureCollection' && data['features'] != null && data['features'].isNotEmpty) {
+        if (data['type'] == 'FeatureCollection' &&
+            data['features'] != null &&
+            data['features'].isNotEmpty) {
           final feature = data['features'][0];
           final properties = feature['properties'];
           final geometry = feature['geometry'];
-          
+
           if (geometry != null && geometry['coordinates'] != null) {
             final coordinates = geometry['coordinates'];
-            final newLocation = LatLng(coordinates[1], coordinates[0]); // lat, lon
-            
+            final newLocation =
+                LatLng(coordinates[1], coordinates[0]); // lat, lon
+
             setState(() {
               _selectedLocation = newLocation;
               _initialPosition = newLocation;
@@ -223,18 +226,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
             // Update address field with formatted address
             _locationController.text = properties['formatted'] ?? query;
-            
-            print('DEBUG: Found location: ${coordinates[1]}, ${coordinates[0]}');
+
+            print(
+                'DEBUG: Found location: ${coordinates[1]}, ${coordinates[0]}');
             print('DEBUG: Formatted address: ${properties['formatted']}');
           } else {
             print('DEBUG: No coordinates found in feature geometry');
           }
-        } 
+        }
         // Check for direct results format (suggestions format)
         else if (data['results'] != null && data['results'].isNotEmpty) {
           final result = data['results'][0];
           final newLocation = LatLng(result['lat'], result['lon']);
-          
+
           setState(() {
             _selectedLocation = newLocation;
             _initialPosition = newLocation;
@@ -248,14 +252,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
           // Update address field with formatted address
           _locationController.text = result['formatted'] ?? query;
-          
+
           print('DEBUG: Found location: ${result['lat']}, ${result['lon']}');
           print('DEBUG: Formatted address: ${result['formatted']}');
         } else {
           print('DEBUG: No results found in API response');
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Location not found')),
-          );
+          NotificationService.showWarningToast('Location not found');
         }
       } else {
         print('DEBUG: API request failed with status: ${response.statusCode}');
@@ -263,9 +265,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       }
     } catch (e) {
       print('DEBUG: Error searching location: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error searching location: ${e.toString()}')),
-      );
+      NotificationService.showErrorToast(
+          'Error searching location: ${e.toString()}');
     }
   }
 
@@ -281,27 +282,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       print('DEBUG: Getting suggestions for: $query');
       // Use Geoapify API for autocomplete suggestions
-      final url = 'https://api.geoapify.com/v1/geocode/search?text=${Uri.encodeComponent(query)}&apiKey=7ae5dc566f9f4047bd609208fae21ddb&limit=5&type=city&format=json';
-      
+      final url =
+          'https://api.geoapify.com/v1/geocode/search?text=${Uri.encodeComponent(query)}&apiKey=7ae5dc566f9f4047bd609208fae21ddb&limit=5&type=city&format=json';
+
       final response = await http.get(Uri.parse(url));
-      
+
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
         print('DEBUG: Suggestions API response: $data');
-        
+
         final suggestions = <String>[];
-        
+
         if (data['results'] != null && data['results'].isNotEmpty) {
           for (var result in data['results']) {
             // Create a display string with city, state, country
             String display = result['city'] ?? '';
             if (result['state'] != null && result['state'] != result['city']) {
-              display += display.isNotEmpty ? ', ${result['state']}' : result['state'];
+              display +=
+                  display.isNotEmpty ? ', ${result['state']}' : result['state'];
             }
-            if (result['country'] != null && result['country'] != result['state']) {
-              display += display.isNotEmpty ? ', ${result['country']}' : result['country'];
+            if (result['country'] != null &&
+                result['country'] != result['state']) {
+              display += display.isNotEmpty
+                  ? ', ${result['country']}'
+                  : result['country'];
             }
-            
+
             if (display.isNotEmpty) {
               suggestions.add(display);
             }
@@ -312,10 +318,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _searchSuggestions = suggestions;
           _showSuggestions = suggestions.isNotEmpty;
         });
-        
+
         print('DEBUG: Found ${suggestions.length} suggestions: $suggestions');
       } else {
-        print('DEBUG: Suggestions API failed with status: ${response.statusCode}');
+        print(
+            'DEBUG: Suggestions API failed with status: ${response.statusCode}');
         throw Exception('Failed to load suggestions');
       }
     } catch (e) {
@@ -332,7 +339,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     print('DEBUG: _showLocationPicker called');
     // Initialize map controller
     _mapController = MapController();
-    
+
     // If no initial position is set, use a default location (New York)
     if (_initialPosition == null) {
       _initialPosition = const LatLng(40.7128, -74.0060);
@@ -359,7 +366,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       );
       if (addresses.isNotEmpty) {
         final address = addresses.first;
-        final locationText = '${address.locality}, ${address.administrativeArea}, ${address.country}';
+        final locationText =
+            '${address.locality}, ${address.administrativeArea}, ${address.country}';
         _locationController.text = locationText;
       }
     } catch (e) {
@@ -367,32 +375,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     _hideLocationPicker();
-  }
-
-  void _showTopToast(String message, {bool isError = false}) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          message,
-          style: const TextStyle(
-            color: Colors.white,
-            fontSize: 16,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-        backgroundColor: isError ? Colors.red : Colors.green,
-        behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.only(
-          top: 50,
-          left: 16,
-          right: 16,
-        ),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        duration: const Duration(seconds: 3),
-      ),
-    );
   }
 
   Future<void> _saveProfile() async {
@@ -403,14 +385,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final updatedProfile = await UserProfileService.updateProfile(
         userId: _profile!.id,
-        username: _usernameController.text.trim().isEmpty 
-            ? null 
+        username: _usernameController.text.trim().isEmpty
+            ? null
             : _usernameController.text.trim(),
-        fullName: _fullNameController.text.trim().isEmpty 
-            ? null 
+        fullName: _fullNameController.text.trim().isEmpty
+            ? null
             : _fullNameController.text.trim(),
-        defaultLocation: _locationController.text.trim().isEmpty 
-            ? null 
+        defaultLocation: _locationController.text.trim().isEmpty
+            ? null
             : _locationController.text.trim(),
         temperatureUnit: _selectedTemperatureUnit,
         themePreference: _selectedTheme,
@@ -422,11 +404,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
 
       if (mounted) {
-        _showTopToast('Profile updated successfully!');
+        NotificationService.showSuccessToast('Profile updated successfully!');
       }
     } catch (e) {
       if (mounted) {
-        _showTopToast('Error saving profile: ${e.toString()}', isError: true);
+        NotificationService.showErrorToast(
+            'Error saving profile: ${e.toString()}');
       }
     } finally {
       setState(() => _isSaving = false);
@@ -438,9 +421,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       await GoogleAuthService.signOut();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error signing out: ${e.toString()}')),
-        );
+        NotificationService.showErrorToast(
+            'Error signing out: ${e.toString()}');
       }
     }
   }
@@ -479,8 +461,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ? const Icon(Icons.map, color: Colors.white70)
                     : null,
                 filled: true,
-                fillColor: enabled 
-                    ? Colors.white.withOpacity(0.2) 
+                fillColor: enabled
+                    ? Colors.white.withOpacity(0.2)
                     : Colors.white.withOpacity(0.1),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
@@ -529,8 +511,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
         const SizedBox(height: 8),
         Container(
           decoration: BoxDecoration(
-            color: enabled 
-                ? Colors.white.withOpacity(0.2) 
+            color: enabled
+                ? Colors.white.withOpacity(0.2)
                 : Colors.white.withOpacity(0.1),
             borderRadius: BorderRadius.circular(12),
           ),
@@ -559,7 +541,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: enabled ? Colors.white70 : Colors.white38,
                 ),
                 isExpanded: true,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               ),
             ),
           ),
@@ -634,10 +617,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             prefixIcon: const Icon(Icons.search),
                             suffixIcon: IconButton(
                               icon: const Icon(Icons.search),
-                              onPressed: () => _searchLocation(_searchController.text),
+                              onPressed: () =>
+                                  _searchLocation(_searchController.text),
                             ),
                             border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
                           ),
                           onChanged: (value) => _getLocationSuggestions(value),
                           onSubmitted: (value) => _searchLocation(value),
@@ -670,7 +655,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 final suggestion = _searchSuggestions[index];
                                 return ListTile(
                                   dense: true,
-                                  leading: const Icon(Icons.location_on, size: 16),
+                                  leading:
+                                      const Icon(Icons.location_on, size: 16),
                                   title: Text(suggestion),
                                   onTap: () {
                                     _searchController.text = suggestion;
@@ -688,13 +674,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     child: FlutterMap(
                       mapController: _mapController,
                       options: MapOptions(
-                        initialCenter: _selectedLocation ?? const LatLng(40.7128, -74.0060),
+                        initialCenter: _selectedLocation ??
+                            const LatLng(40.7128, -74.0060),
                         initialZoom: 14,
                         onTap: _onLocationSelected,
                       ),
                       children: [
                         TileLayer(
-                          urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                          urlTemplate:
+                              'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                           userAgentPackageName: 'org.openstreetmap.api',
                           maxZoom: 19,
                         ),
@@ -742,7 +730,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: ElevatedButton.icon(
                           onPressed: _selectedLocation != null
                               ? () {
-                                  _onLocationSelected(const TapPosition(Offset.zero, Offset.zero), _selectedLocation!);
+                                  _onLocationSelected(
+                                      const TapPosition(
+                                          Offset.zero, Offset.zero),
+                                      _selectedLocation!);
                                 }
                               : null,
                           icon: const Icon(Icons.check),
@@ -901,7 +892,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       icon: Icons.location_on,
                       hintText: 'e.g., New York, NY',
                       onTap: () {
-                        print('DEBUG: Location field tapped, _isEditing: $_isEditing');
+                        print(
+                            'DEBUG: Location field tapped, _isEditing: $_isEditing');
                         if (_isEditing) {
                           _showLocationPicker();
                         } else {
