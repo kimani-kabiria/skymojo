@@ -1,3 +1,5 @@
+import 'package:skymojo/models/location_tag.dart';
+
 class FavoriteLocation {
   final String id;
   final String userId;
@@ -5,6 +7,7 @@ class FavoriteLocation {
   final double latitude;
   final double longitude;
   final bool isDefault;
+  final List<String> tags;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -15,6 +18,7 @@ class FavoriteLocation {
     required this.latitude,
     required this.longitude,
     this.isDefault = false,
+    this.tags = const [],
     required this.createdAt,
     required this.updatedAt,
   });
@@ -27,6 +31,9 @@ class FavoriteLocation {
       latitude: (map['latitude'] as num?)?.toDouble() ?? 0.0,
       longitude: (map['longitude'] as num?)?.toDouble() ?? 0.0,
       isDefault: map['is_default'] as bool? ?? false,
+      tags:
+          (map['tags'] as List<dynamic>?)?.map((e) => e.toString()).toList() ??
+              [],
       createdAt: map['created_at'] != null
           ? DateTime.parse(map['created_at'].toString())
           : DateTime.now(),
@@ -44,6 +51,7 @@ class FavoriteLocation {
       'latitude': latitude,
       'longitude': longitude,
       'is_default': isDefault,
+      'tags': tags,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -56,6 +64,7 @@ class FavoriteLocation {
     double? latitude,
     double? longitude,
     bool? isDefault,
+    List<String>? tags,
     DateTime? createdAt,
     DateTime? updatedAt,
   }) {
@@ -66,10 +75,13 @@ class FavoriteLocation {
       latitude: latitude ?? this.latitude,
       longitude: longitude ?? this.longitude,
       isDefault: isDefault ?? this.isDefault,
+      tags: tags ?? this.tags,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
+
+  List<LocationTag> get tagObjects => LocationTag.getByIds(tags);
 
   @override
   bool operator ==(Object other) {
@@ -97,6 +109,6 @@ class FavoriteLocation {
 
   @override
   String toString() {
-    return 'FavoriteLocation(id: $id, name: $name, isDefault: $isDefault)';
+    return 'FavoriteLocation(id: $id, name: $name, isDefault: $isDefault, tags: $tags)';
   }
 }

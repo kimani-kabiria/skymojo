@@ -36,6 +36,7 @@ class FavoriteLocationService {
     required String name,
     required double latitude,
     required double longitude,
+    List<String> tags = const [],
     bool isDefault = false,
   }) async {
     try {
@@ -55,6 +56,7 @@ class FavoriteLocationService {
         'name': name,
         'latitude': latitude,
         'longitude': longitude,
+        'tags': tags,
         'is_default': isDefault,
       };
 
@@ -72,6 +74,10 @@ class FavoriteLocationService {
         latitude: (response['latitude'] as num?)?.toDouble() ?? latitude,
         longitude: (response['longitude'] as num?)?.toDouble() ?? longitude,
         isDefault: response['is_default'] as bool? ?? false,
+        tags: (response['tags'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toList() ??
+            tags,
         createdAt: response['created_at'] != null
             ? DateTime.parse(response['created_at'].toString())
             : DateTime.now(),
@@ -90,9 +96,9 @@ class FavoriteLocationService {
   static Future<FavoriteLocation> updateFavoriteLocation({
     required String id,
     String? name,
-    String? address,
     double? latitude,
     double? longitude,
+    List<String>? tags,
     bool? isDefault,
   }) async {
     try {
@@ -101,19 +107,17 @@ class FavoriteLocationService {
         throw Exception('No authenticated user found');
       }
 
-      final updateData = <String, dynamic>{};
+      // If setting as default, unset other defaults
+      if (isDefault == true) {
+        await _unsetAllDefaultLocations(userId);
+      }
 
+      final updateData = <String, dynamic>{};
       if (name != null) updateData['name'] = name;
-      if (address != null) updateData['address'] = address;
       if (latitude != null) updateData['latitude'] = latitude;
       if (longitude != null) updateData['longitude'] = longitude;
-      if (isDefault != null) {
-        updateData['is_default'] = isDefault;
-        // If setting as default, unset other defaults
-        if (isDefault) {
-          await _unsetAllDefaultLocations(userId);
-        }
-      }
+      if (tags != null) updateData['tags'] = tags;
+      if (isDefault != null) updateData['is_default'] = isDefault;
 
       final response = await _client
           .from('favorite_locations')
@@ -123,7 +127,6 @@ class FavoriteLocationService {
           .select()
           .single();
 
-      print('Updated favorite location: ${response['name']}');
       return FavoriteLocation.fromMap(response);
     } catch (e) {
       print('Error updating favorite location: $e');
