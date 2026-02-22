@@ -3,6 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import 'package:skymojo/services/favorite_location_service.dart';
 import 'package:skymojo/services/user_profile_service.dart';
+import 'package:skymojo/models/location_tag.dart';
 import 'package:geolocator/geolocator.dart';
 
 class SelectedLocation {
@@ -11,6 +12,7 @@ class SelectedLocation {
   final double latitude;
   final double longitude;
   final String type; // 'profile_default', 'current', 'favorite'
+  final List<LocationTag> tags; // Tags from favorite locations
 
   const SelectedLocation({
     required this.id,
@@ -18,15 +20,21 @@ class SelectedLocation {
     required this.latitude,
     required this.longitude,
     required this.type,
+    this.tags = const [],
   });
 
   factory SelectedLocation.fromMap(Map<String, dynamic> map) {
     return SelectedLocation(
-      id: map['id'] as String,
-      name: map['name'] as String,
-      latitude: (map['latitude'] as num).toDouble(),
-      longitude: (map['longitude'] as num).toDouble(),
-      type: map['type'] as String,
+      id: map['id']?.toString() ?? '',
+      name: map['name']?.toString() ?? '',
+      latitude: (map['latitude'] as num?)?.toDouble() ?? 0.0,
+      longitude: (map['longitude'] as num?)?.toDouble() ?? 0.0,
+      type: map['type']?.toString() ?? 'favorite',
+      tags: (map['tags'] as List<dynamic>?)
+              ?.map((tag) => LocationTag.getById(tag.toString()))
+              .whereType<LocationTag>()
+              .toList() ??
+          [],
     );
   }
 
@@ -37,6 +45,7 @@ class SelectedLocation {
       'latitude': latitude,
       'longitude': longitude,
       'type': type,
+      'tags': tags.map((tag) => tag.id).toList(),
     };
   }
 
@@ -54,6 +63,11 @@ class SelectedLocation {
   @override
   int get hashCode {
     return Object.hash(id, name, latitude, longitude, type);
+  }
+
+  @override
+  String toString() {
+    return 'SelectedLocation(id: $id, name: $name, type: $type, tags: ${tags.map((t) => t.id).toList()})';
   }
 }
 
@@ -168,6 +182,7 @@ class LocationCacheService {
             latitude: matchingFavorite.latitude,
             longitude: matchingFavorite.longitude,
             type: 'profile_default',
+            tags: matchingFavorite.tagObjects,
           );
           locations.add(profileDefaultLocation);
           addedLocationIds.add(matchingFavorite.id);
@@ -201,7 +216,7 @@ class LocationCacheService {
       final defaultFavoriteLocation =
           await FavoriteLocationService.getDefaultLocation();
       if (defaultFavoriteLocation != null) {
-        // Check if this is different from the profile default we already added
+        // Check if this is different from profile default we already added
         if (!addedLocationIds.contains(defaultFavoriteLocation.id)) {
           locations.add(SelectedLocation(
             id: defaultFavoriteLocation.id,
@@ -209,6 +224,7 @@ class LocationCacheService {
             latitude: defaultFavoriteLocation.latitude,
             longitude: defaultFavoriteLocation.longitude,
             type: 'favorite',
+            tags: defaultFavoriteLocation.tagObjects,
           ));
           addedLocationIds.add(defaultFavoriteLocation.id);
         }
@@ -230,6 +246,7 @@ class LocationCacheService {
           latitude: position.latitude,
           longitude: position.longitude,
           type: 'current',
+          tags: currentLocationFavorite?.tagObjects ?? [],
         );
         locations.add(currentLocation);
         addedLocationIds.add('current_location');
@@ -237,7 +254,7 @@ class LocationCacheService {
         print('Could not get current location: $e');
       }
 
-      // 4. Get other favorite locations (excluding the ones already added)
+      // 4. Get other favorite locations (excluding ones already added)
       final favoriteLocations =
           await FavoriteLocationService.getFavoriteLocations();
       for (final favorite in favoriteLocations) {
@@ -249,6 +266,7 @@ class LocationCacheService {
             latitude: favorite.latitude,
             longitude: favorite.longitude,
             type: 'favorite',
+            tags: favorite.tagObjects,
           ));
           addedLocationIds.add(favorite.id);
         }

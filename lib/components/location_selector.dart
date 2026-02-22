@@ -151,7 +151,7 @@ class _LocationSelectorState extends State<LocationSelector> {
     }
   }
 
-  Color _getLocationIconColor(String type) {
+  Color _getLocationColor(String type) {
     switch (type) {
       case 'profile_default':
         return Colors.blue;
@@ -177,20 +177,26 @@ class _LocationSelectorState extends State<LocationSelector> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade300),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
         ),
-        child: Row(
+        child: const Row(
           children: [
             SizedBox(
               width: 20,
               height: 20,
               child: CircularProgressIndicator(strokeWidth: 2),
             ),
-            const SizedBox(width: 12),
+            SizedBox(width: 12),
             Text(
               'Loading locations...',
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: const Color(0xFF9E9E9E),
                 fontSize: 16,
               ),
             ),
@@ -200,66 +206,94 @@ class _LocationSelectorState extends State<LocationSelector> {
     }
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade300),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
-            blurRadius: 4,
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 8,
             offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<SelectedLocation>(
-          value: _selectedLocation,
-          isExpanded: true,
-          hint: Text(
-            'Select location',
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontSize: 16,
+      child: DropdownButton<SelectedLocation>(
+        value: _selectedLocation,
+        hint: Row(
+          children: [
+            Icon(
+              UniconsLine.map_marker,
+              size: 20,
+              color: const Color(0xFF9E9E9E),
             ),
-          ),
-          icon: Icon(
-            UniconsLine.angle_down,
-            color: Colors.grey.shade600,
-            size: 20,
-          ),
-          items: _availableLocations.map((location) {
-            return DropdownMenuItem<SelectedLocation>(
-              value: location,
-              child: Row(
-                children: [
-                  Icon(
-                    _getLocationIcon(location.type),
-                    color: _getLocationIconColor(location.type),
-                    size: 20,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      _getLocationDisplayName(location.name, location.type),
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w500,
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
+            const SizedBox(width: 8),
+            Text(
+              'Select a location',
+              style: TextStyle(
+                color: const Color(0xFF9E9E9E),
+                fontSize: 16,
               ),
-            );
-          }).toList(),
-          onChanged: (SelectedLocation? newLocation) {
-            if (newLocation != null) {
-              _onLocationSelected(newLocation);
-            }
-          },
+            ),
+          ],
         ),
+        isExpanded: true,
+        underline: const SizedBox(), // Remove the bottom line
+        dropdownColor: Colors.white, // Keep dropdown background white
+        items: _availableLocations.map((location) {
+          return DropdownMenuItem<SelectedLocation>(
+            value: location,
+            child: Row(
+              children: [
+                Icon(
+                  _getLocationIcon(location.type),
+                  size: 18,
+                  color: _getLocationColor(location.type),
+                ),
+                const SizedBox(width: 8),
+                // Show tag icons if available
+                if (location.tags.isNotEmpty) ...[
+                  const SizedBox(width: 4),
+                  ...location.tags
+                      .take(2)
+                      .map((tag) => [
+                            Text(
+                              tag.icon,
+                              style: const TextStyle(fontSize: 14),
+                            ),
+                            const SizedBox(width: 2),
+                          ])
+                      .expand((element) => element)
+                      .toList(),
+                  if (location.tags.length > 2)
+                    Text(
+                      '+${location.tags.length - 2}',
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: const Color(0xFF9E9E9E),
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                ],
+                Expanded(
+                  child: Text(
+                    _getLocationDisplayName(location.name, location.type),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+          );
+        }).toList(),
+        onChanged: (SelectedLocation? location) {
+          if (location != null) {
+            _onLocationSelected(location);
+          }
+        },
       ),
     );
   }
