@@ -20,7 +20,7 @@ class NotificationService {
     Fluttertoast.showToast(
       msg: message,
       toastLength: toastLength ?? Toast.LENGTH_SHORT,
-      gravity: gravity ?? ToastGravity.BOTTOM,
+      gravity: gravity ?? ToastGravity.TOP,
       timeInSecForIosWeb: timeInSecForIosWeb,
       backgroundColor: backgroundColor ?? Colors.grey[800],
       textColor: textColor ?? Colors.white,
@@ -33,7 +33,7 @@ class NotificationService {
       message,
       backgroundColor: _successColor,
       textColor: Colors.white,
-      gravity: ToastGravity.BOTTOM,
+      gravity: ToastGravity.TOP,
     );
   }
 
@@ -42,7 +42,7 @@ class NotificationService {
       message,
       backgroundColor: _errorColor,
       textColor: Colors.white,
-      gravity: ToastGravity.BOTTOM,
+      gravity: ToastGravity.TOP,
     );
   }
 
@@ -51,7 +51,7 @@ class NotificationService {
       message,
       backgroundColor: _warningColor,
       textColor: Colors.white,
-      gravity: ToastGravity.BOTTOM,
+      gravity: ToastGravity.TOP,
     );
   }
 
@@ -60,7 +60,7 @@ class NotificationService {
       message,
       backgroundColor: _infoColor,
       textColor: Colors.white,
-      gravity: ToastGravity.BOTTOM,
+      gravity: ToastGravity.TOP,
     );
   }
 
